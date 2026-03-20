@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const model = defineModel<string>({ default: '' })
+const model = defineModel<string>({ default: "" });
 </script>
 
 <template>
@@ -12,7 +12,7 @@ const model = defineModel<string>({ default: '' })
       v-model="model"
       type="date"
       class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-    >
+    />
     <button
       v-if="model"
       class="text-sm text-gray-500 hover:text-gray-700"

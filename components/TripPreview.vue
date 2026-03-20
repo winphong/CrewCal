@@ -1,22 +1,29 @@
 <script setup lang="ts">
-import { getAirportInfo, getMapsUrl } from '~/utils/airports'
-import type { Trip } from '~/utils/types'
+import { getAirportInfo, getMapsUrl } from "~/utils/airports";
+import type { Trip } from "~/utils/types";
 
 defineProps<{
-  trips: Trip[]
-}>()
+  trips: Trip[];
+}>();
 
 function formatSgtDate(date: Date): string {
   // Convert UTC date to SGT for display
-  const sgt = new Date(date.getTime() + 8 * 60 * 60 * 1000)
-  return sgt.toISOString().replace('T', ' ').slice(0, 16) + ' SGT'
+  const sgt = new Date(date.getTime() + 8 * 60 * 60 * 1000);
+  return sgt.toISOString().replace("T", " ").slice(0, 16) + " SGT";
 }
 
 function formatDateTime(iso: string): string {
   // "2026-01-20T12:30" → "20 Jan 12:30"
-  const d = new Date(iso + '+08:00')
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'Asia/Singapore' })
-    + ' ' + iso.split('T')[1]
+  const d = new Date(iso + "+08:00");
+  return (
+    d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      timeZone: "Asia/Singapore",
+    }) +
+    " " +
+    iso.split("T")[1]
+  );
 }
 </script>
 
@@ -31,10 +38,11 @@ function formatDateTime(iso: string): string {
         <div>
           <h3 class="text-lg font-semibold">
             {{ getAirportInfo(trip.destination).flag }}
-            {{ getAirportInfo(trip.destination).city }} - {{ getAirportInfo(trip.destination).country }}
+            {{ getAirportInfo(trip.destination).city }} -
+            {{ getAirportInfo(trip.destination).country }}
           </h3>
           <p class="mt-1 text-sm text-gray-500">
-            {{ trip.flightNumbers.join(' / ') }}
+            {{ trip.flightNumbers.join(" / ") }}
           </p>
         </div>
         <a
@@ -47,7 +55,10 @@ function formatDateTime(iso: string): string {
       </div>
 
       <div class="mt-3 text-sm text-gray-600">
-        <p>{{ formatSgtDate(trip.departureDate) }} &rarr; {{ formatSgtDate(trip.returnDate) }}</p>
+        <p>
+          {{ formatSgtDate(trip.departureDate) }} &rarr;
+          {{ formatSgtDate(trip.returnDate) }}
+        </p>
       </div>
 
       <div class="mt-3 space-y-1">
@@ -56,12 +67,17 @@ function formatDateTime(iso: string): string {
           :key="j"
           class="flex items-center gap-2 text-sm text-gray-700"
         >
-          <span class="font-mono text-xs text-gray-400">{{ leg.flightNo }}</span>
+          <span class="font-mono text-xs text-gray-400">{{
+            leg.flightNo
+          }}</span>
           <span>{{ leg.from }}</span>
           <span class="text-gray-400">&rarr;</span>
           <span>{{ leg.to }}</span>
           <span class="text-gray-400">|</span>
-          <span class="text-gray-500">{{ formatDateTime(leg.departAt) }} - {{ formatDateTime(leg.arriveAt) }}</span>
+          <span class="text-gray-500"
+            >{{ formatDateTime(leg.departAt) }} -
+            {{ formatDateTime(leg.arriveAt) }}</span
+          >
         </div>
       </div>
     </div>

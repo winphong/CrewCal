@@ -4,7 +4,12 @@ import type { ReminderOption, Trip } from "~/utils/types";
 const { trips, error, parseCsv, filterByDate } = useFlightParser();
 const { generateIcs, downloadIcs } = useIcsGenerator();
 
-const dateFilter = ref("");
+function todaySGT(): string {
+  const sgt = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  return sgt.toISOString().slice(0, 10);
+}
+
+const dateFilter = ref(todaySGT());
 const csvLoaded = ref(false);
 const selectedReminders = ref<number[]>([2, 3, 4, 6]);
 
@@ -57,9 +62,7 @@ function reset() {
   <div class="min-h-screen bg-gray-50">
     <div class="mx-auto max-w-3xl px-4 py-12">
       <header class="mb-8 text-center">
-        <h1 class="text-3xl font-bold text-gray-900">
-          CrewCal
-        </h1>
+        <h1 class="text-3xl font-bold text-gray-900">CrewCal</h1>
         <p class="mt-2 text-gray-500">
           Upload your flight roster CSV and export grouped trips to your
           calendar
@@ -118,7 +121,7 @@ function reset() {
             found
           </p>
           <button
-            :disabled="filteredTrips.length === 0"
+            :disabled="filteredTrips.length === 0 || !dateFilter"
             class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             @click="onDownload"
           >

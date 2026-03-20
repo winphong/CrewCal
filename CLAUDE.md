@@ -7,6 +7,12 @@ Nuxt 3 SPA that converts cabin crew flight roster CSVs into grouped trip events 
 - `bun run dev` — Start dev server
 - `bun run build` — Production build (Nitro node-server preset)
 - `bun run preview` — Preview production build
+- `bun run format` — Format all files with Prettier
+
+## Code Style
+
+- Follow the Prettier config in `.prettierrc.json`
+- Always run `bun run format` before completing any code changes
 
 ## Architecture
 
