@@ -20,6 +20,7 @@ export interface AirportInfo {
   flag: string;
   lat: number;
   lon: number;
+  name?: string; // Full airport name e.g. "Los Angeles International Airport"
 }
 
 export interface ReminderOption {

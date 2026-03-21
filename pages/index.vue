@@ -9,7 +9,8 @@ function todaySGT(): string {
   return sgt.toISOString().slice(0, 10);
 }
 
-const dateFilter = ref(todaySGT());
+const dateFrom = ref(todaySGT());
+const dateTo = ref("");
 const csvLoaded = ref(false);
 const selectedReminders = ref<number[]>([2, 3, 4, 6]);
 
@@ -23,17 +24,20 @@ const reminderOptions: ReminderOption[] = [
   { label: "48 hours", hours: 48 },
 ];
 
+function parseSgtDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d, -8, 0)); // SGT midnight = UTC-8h
+}
+
 const filteredTrips = computed<Trip[]>(() => {
-  if (!dateFilter.value) return trips.value;
-  // Parse the date filter as SGT midnight, convert to UTC for comparison
-  const [y, m, d] = dateFilter.value.split("-").map(Number);
-  const fromDate = new Date(Date.UTC(y, m - 1, d, -8, 0)); // SGT midnight = UTC -8h
-  return filterByDate(fromDate);
+  const from = dateFrom.value ? parseSgtDate(dateFrom.value) : null;
+  const to = dateTo.value ? parseSgtDate(dateTo.value) : null;
+  return filterByDate(from, to);
 });
 
 function onUpload(csvText: string) {
   parseCsv(csvText);
-  csvLoaded.value = true;
+  csvLoaded.value = !error.value;
 }
 
 function onDownload() {
@@ -53,7 +57,8 @@ function toggleReminder(hours: number) {
 function reset() {
   csvLoaded.value = false;
   trips.value = [];
-  dateFilter.value = "";
+  dateFrom.value = "";
+  dateTo.value = "";
   error.value = null;
 }
 </script>
@@ -85,7 +90,7 @@ function reset() {
         <div
           class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         >
-          <DateFilter v-model="dateFilter" />
+          <DateFilter v-model:from="dateFrom" v-model:to="dateTo" />
           <button
             class="text-sm text-gray-500 hover:text-gray-700"
             @click="reset"
@@ -121,7 +126,7 @@ function reset() {
             found
           </p>
           <button
-            :disabled="filteredTrips.length === 0 || !dateFilter"
+            :disabled="filteredTrips.length === 0 || !dateFrom"
             class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             @click="onDownload"
           >
@@ -134,6 +139,110 @@ function reset() {
           <TripPreview :trips="filteredTrips" />
         </div>
       </template>
+      <!-- How to import -->
+      <div class="mt-12 rounded-xl border border-gray-200 bg-white p-6">
+        <h2 class="text-base font-semibold text-gray-900">
+          How to import to your calendar
+        </h2>
+        <ol class="mt-4 space-y-3 text-sm text-gray-600">
+          <li class="flex gap-3">
+            <span
+              class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700"
+              >1</span
+            >
+            <span>Upload your CSV roster file and select your settings.</span>
+          </li>
+          <li class="flex gap-3">
+            <span
+              class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700"
+              >2</span
+            >
+            <span
+              >Set <strong>Show trips from</strong> to today's date to avoid
+              duplicating past flights.</span
+            >
+          </li>
+          <li class="flex gap-3">
+            <span
+              class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700"
+              >3</span
+            >
+            <span>Click <strong>Download .ics</strong> to save the file.</span>
+          </li>
+          <li class="flex gap-3">
+            <span
+              class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700"
+              >4</span
+            >
+            <span
+              ><strong>On iPhone:</strong> opening the .ics file from the Files
+              app may not trigger calendar import. Instead, email the file to
+              yourself, then tap it from the <strong>Mail app</strong> — this
+              will prompt you to add the events to your calendar.</span
+            >
+          </li>
+          <li class="flex gap-3">
+            <span
+              class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700"
+              >5</span
+            >
+            <span
+              >Select your existing calendar when prompted. Each event has a
+              unique ID, so importing the same file twice will not create
+              duplicates.</span
+            >
+          </li>
+        </ol>
+
+        <div class="mt-6 border-t border-gray-100 pt-5">
+          <p class="text-sm font-semibold text-gray-700">
+            Importing via Google Calendar (desktop only)
+          </p>
+          <ol class="mt-3 space-y-2 text-sm text-gray-600">
+            <li class="flex gap-3">
+              <span
+                class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-600"
+                >1</span
+              >
+              <span
+                >Open <strong>calendar.google.com</strong> on your desktop
+                browser.</span
+              >
+            </li>
+            <li class="flex gap-3">
+              <span
+                class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-600"
+                >2</span
+              >
+              <span
+                >Click the <strong>⚙ Settings</strong> gear icon (top right) →
+                <strong>Settings</strong>.</span
+              >
+            </li>
+            <li class="flex gap-3">
+              <span
+                class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-600"
+                >3</span
+              >
+              <span
+                >In the left sidebar, click
+                <strong>Import &amp; export</strong>.</span
+              >
+            </li>
+            <li class="flex gap-3">
+              <span
+                class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-600"
+                >4</span
+              >
+              <span
+                >Under <strong>Import</strong>, select the downloaded
+                <strong>.ics</strong> file, choose your existing calendar, then
+                click <strong>Import</strong>.</span
+              >
+            </li>
+          </ol>
+        </div>
+      </div>
     </div>
   </div>
 </template>

@@ -6075,21 +6075,96 @@ export const airports: Record<string, AirportInfo> = {
   ZZV: { city: 'Zanesville', country: 'United States', flag: '🇺🇸', lat: 39.9444, lon: -81.8921 },
 }
 
-export function getAirportInfo(iata: string): AirportInfo {
-  return airports[iata] ?? {
-    city: iata,
-    country: 'Unknown',
-    flag: '',
-    lat: 0,
-    lon: 0,
-  }
+// Airport name overrides for common SQ destinations
+const airportNames: Record<string, string> = {
+  SIN: 'Singapore Changi Airport',
+  LAX: 'Los Angeles International Airport',
+  LHR: 'London Heathrow Airport',
+  SYD: 'Sydney Kingsford Smith Airport',
+  NRT: 'Tokyo Narita International Airport',
+  HND: 'Tokyo Haneda Airport',
+  ICN: 'Seoul Incheon International Airport',
+  HKG: 'Hong Kong International Airport',
+  PEK: 'Beijing Capital International Airport',
+  PKX: 'Beijing Daxing International Airport',
+  PVG: 'Shanghai Pudong International Airport',
+  SHA: 'Shanghai Hongqiao International Airport',
+  BKK: 'Bangkok Suvarnabhumi Airport',
+  DMK: 'Bangkok Don Mueang International Airport',
+  KUL: 'Kuala Lumpur International Airport',
+  CGK: 'Jakarta Soekarno-Hatta International Airport',
+  DPS: 'Bali Ngurah Rai International Airport',
+  MNL: 'Manila Ninoy Aquino International Airport',
+  DXB: 'Dubai International Airport',
+  DOH: 'Hamad International Airport',
+  AUH: 'Abu Dhabi International Airport',
+  BOM: 'Mumbai Chhatrapati Shivaji Maharaj International Airport',
+  DEL: 'Delhi Indira Gandhi International Airport',
+  BLR: 'Bengaluru Kempegowda International Airport',
+  MAA: 'Chennai International Airport',
+  CCU: 'Kolkata Netaji Subhash Chandra Bose International Airport',
+  MLE: 'Malé Velana International Airport',
+  CMB: 'Colombo Bandaranaike International Airport',
+  DAC: 'Dhaka Hazrat Shahjalal International Airport',
+  KTM: 'Kathmandu Tribhuvan International Airport',
+  JFK: 'John F. Kennedy International Airport',
+  EWR: 'Newark Liberty International Airport',
+  SFO: 'San Francisco International Airport',
+  ORD: "Chicago O'Hare International Airport",
+  SEA: 'Seattle-Tacoma International Airport',
+  YVR: 'Vancouver International Airport',
+  YYZ: 'Toronto Pearson International Airport',
+  FRA: 'Frankfurt Airport',
+  CDG: 'Paris Charles de Gaulle Airport',
+  AMS: 'Amsterdam Schiphol Airport',
+  ZRH: 'Zurich Airport',
+  MUC: 'Munich Airport',
+  BCN: 'Barcelona El Prat Airport',
+  FCO: 'Rome Fiumicino Airport',
+  MEL: 'Melbourne Tullamarine Airport',
+  BNE: 'Brisbane Airport',
+  PER: 'Perth Airport',
+  AKL: 'Auckland Airport',
+  JNB: 'Johannesburg O.R. Tambo International Airport',
+  CPT: 'Cape Town International Airport',
+  NBO: 'Nairobi Jomo Kenyatta International Airport',
+  GRU: 'São Paulo Guarulhos International Airport',
+  FUK: 'Fukuoka Airport',
+  OKA: 'Okinawa Naha Airport',
+  KIX: 'Osaka Kansai International Airport',
+  ITM: 'Osaka Itami Airport',
+  CTS: 'Sapporo New Chitose Airport',
+  NGO: 'Nagoya Chubu Centrair International Airport',
+  RGN: 'Yangon International Airport',
+  SGN: 'Ho Chi Minh City Tan Son Nhat International Airport',
+  HAN: 'Hanoi Noi Bai International Airport',
+  PNH: 'Phnom Penh International Airport',
+  VTE: 'Vientiane Wattay International Airport',
+  BWN: 'Bandar Seri Begawan Brunei International Airport',
+  CEB: 'Cebu Mactan-Cebu International Airport',
+  DRW: 'Darwin International Airport',
+  ADL: 'Adelaide Airport',
+  CHC: 'Christchurch Airport',
 }
 
-export function getMapsUrl(iata: string): string {
+export function getAirportInfo(iata: string): AirportInfo {
+  const info = airports[iata]
+  if (!info) return { city: iata, country: 'Unknown', flag: '', lat: 0, lon: 0 }
+  return airportNames[iata] ? { ...info, name: airportNames[iata] } : info
+}
+
+/** Returns a plain-text location string suitable for calendar LOCATION fields.
+ *  Google Calendar geocodes this and displays the full address + map pin. */
+export function getLocationText(iata: string): string {
   const info = getAirportInfo(iata)
-  if (airports[iata]) {
-    const city = encodeURIComponent(info.city + ' airport')
-    return `https://www.google.com/maps/search/${city}/@${info.lat},${info.lon},12z`
-  }
-  return `https://www.google.com/maps/search/${iata}+airport`
+  if (info.name) return `${info.name}, ${info.city}, ${info.country}`
+  if (airports[iata]) return `${info.city} Airport, ${info.country}`
+  return `${iata} Airport`
+}
+
+/** Returns geo coordinates as "lat;lon" for the ICS GEO property. */
+export function getGeo(iata: string): string | null {
+  const info = airports[iata]
+  if (!info || (info.lat === 0 && info.lon === 0)) return null
+  return `${info.lat};${info.lon}`
 }

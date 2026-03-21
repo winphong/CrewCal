@@ -11,12 +11,29 @@ function parseSgtIso(isoStr: string): Date {
   return new Date(Date.UTC(y, m - 1, d, h - 8, min));
 }
 
+const REQUIRED_HEADERS = [
+  "Airline",
+  "Flight",
+  "From",
+  "To",
+  "Gate Departure (Scheduled)",
+  "Gate Arrival (Scheduled)",
+];
+
 function parseFlightLegs(csvText: string): FlightLeg[] {
   const result = Papa.parse<Record<string, string>>(csvText, {
     header: true,
     skipEmptyLines: true,
     transformHeader: (h: string) => h.trim(),
   });
+
+  const headers = result.meta.fields ?? [];
+  const missing = REQUIRED_HEADERS.filter((h) => !headers.includes(h));
+  if (missing.length > 0) {
+    throw new Error(
+      `This doesn't look like a Flighty export. Missing columns: ${missing.join(", ")}`,
+    );
+  }
 
   return result.data.map((row) => {
     const airline = (row["Airline"] ?? "").trim();
@@ -108,8 +125,12 @@ export function useFlightParser() {
     }
   }
 
-  function filterByDate(fromDate: Date): Trip[] {
-    return trips.value.filter((trip) => trip.departureDate >= fromDate);
+  function filterByDate(fromDate: Date | null, toDate: Date | null): Trip[] {
+    return trips.value.filter((trip) => {
+      if (fromDate && trip.departureDate < fromDate) return false;
+      if (toDate && trip.departureDate > toDate) return false;
+      return true;
+    });
   }
 
   return { trips, error, parseCsv, filterByDate };

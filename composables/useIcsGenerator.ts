@@ -1,5 +1,5 @@
 import { buildIcs, type IcsEvent } from "~/utils/ics";
-import { getAirportInfo, getMapsUrl } from "~/utils/airports";
+import { getAirportInfo, getLocationText, getGeo } from "~/utils/airports";
 import type { Trip } from "~/utils/types";
 
 function formatLegDetail(leg: {
@@ -23,14 +23,16 @@ function tripToIcsEvent(trip: Trip, reminderHours: number[]): IcsEvent {
   const uid = `${trip.flightNumbers.join("-")}-${formatUidDate(trip.departureDate)}@flight-schedule-exporter`;
 
   const summary = `${destInfo.city} - ${destInfo.country} ${destInfo.flag} (${flightNos})`;
-  const location = getMapsUrl(trip.destination);
-  const description = trip.legs.map(formatLegDetail).join("\n");
+  const location = getLocationText(trip.destination);
+  const geo = getGeo(trip.destination);
+  const description = trip.legs.map(formatLegDetail).join("\n\n");
 
   return {
     uid,
     summary,
     description,
     location,
+    geo,
     dtstart: trip.departureDate,
     dtend: trip.returnDate,
     reminderHours,
@@ -52,14 +54,28 @@ export function useIcsGenerator() {
     return buildIcs(events);
   }
 
-  function downloadIcs(icsContent: string, filename = "flights.ics") {
+  function downloadIcs(icsContent: string, filename?: string) {
+    const now = new Date();
+    const ts =
+      [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, "0"),
+        String(now.getDate()).padStart(2, "0"),
+      ].join("") +
+      "-" +
+      [
+        String(now.getHours()).padStart(2, "0"),
+        String(now.getMinutes()).padStart(2, "0"),
+        String(now.getSeconds()).padStart(2, "0"),
+      ].join("");
+    const resolvedFilename = filename ?? `flights-${ts}.ics`;
     const blob = new Blob([icsContent], {
       type: "text/calendar;charset=utf-8",
     });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = filename;
+    link.download = resolvedFilename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

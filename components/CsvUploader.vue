@@ -57,8 +57,23 @@ function openFilePicker() {
       @change="onFileChange"
     />
     <div class="text-gray-500">
-      <p class="text-lg font-medium">Drop your CSV file here</p>
-      <p class="mt-1 text-sm">or click to browse</p>
+      <p class="text-lg font-medium sm:hidden">Tap to select your CSV file</p>
+      <p class="hidden text-lg font-medium sm:block">Drop your CSV file here</p>
+      <p class="mt-1 text-sm sm:block">
+        <span class="sm:hidden">or browse files</span>
+        <span class="hidden sm:inline">or click to browse</span>
+      </p>
+      <p class="mt-3 text-xs text-gray-400">
+        Only
+        <a
+          href="https://flighty.com"
+          target="_blank"
+          class="underline hover:text-gray-500"
+          @click.stop
+          >Flighty</a
+        >
+        exported CSV format is supported
+      </p>
     </div>
   </div>
 </template>

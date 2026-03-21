@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getAirportInfo, getMapsUrl } from "~/utils/airports";
+import { getAirportInfo, getLocationText } from "~/utils/airports";
 import type { Trip } from "~/utils/types";
 
 defineProps<{
@@ -46,7 +46,7 @@ function formatDateTime(iso: string): string {
           </p>
         </div>
         <a
-          :href="getMapsUrl(trip.destination)"
+          :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(getLocationText(trip.destination))}`"
           target="_blank"
           class="text-sm text-blue-600 hover:underline"
         >

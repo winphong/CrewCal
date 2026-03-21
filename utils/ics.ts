@@ -78,6 +78,7 @@ export interface IcsEvent {
   summary: string;
   description: string;
   location: string;
+  geo: string | null; // "lat;lon" e.g. "33.9425;-118.408"
   dtstart: Date; // SGT datetime
   dtend: Date; // SGT datetime
   reminderHours: number[];
@@ -107,6 +108,7 @@ function buildVEvent(event: IcsEvent): string {
     `DTEND;TZID=Asia/Singapore:${formatDateTimeSGT(event.dtend)}`,
     `SUMMARY:${escapeText(event.summary)}`,
     `LOCATION:${escapeText(event.location)}`,
+    ...(event.geo ? [`GEO:${event.geo}`] : []),
     `DESCRIPTION:${escapeText(event.description)}`,
   ];
 
