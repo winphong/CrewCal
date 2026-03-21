@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ReminderOption, Trip } from "~/utils/types";
 
-const { trips, error, parseCsv, filterByDate } = useFlightParser();
+const { trips, error, parseCsv, regroup, filterByDate } = useFlightParser();
 const { generateIcs, downloadIcs } = useIcsGenerator();
 
 function todaySGT(): string {
@@ -11,6 +11,7 @@ function todaySGT(): string {
 
 const dateFrom = ref(todaySGT());
 const dateTo = ref("");
+const homeAirport = ref("SIN");
 const csvLoaded = ref(false);
 const selectedReminders = ref<number[]>([2, 3, 4, 6]);
 
@@ -36,9 +37,14 @@ const filteredTrips = computed<Trip[]>(() => {
 });
 
 function onUpload(csvText: string) {
-  parseCsv(csvText);
+  parseCsv(csvText, homeAirport.value.toUpperCase());
   csvLoaded.value = !error.value;
 }
+
+watch(homeAirport, (val) => {
+  const code = val.trim().toUpperCase();
+  if (code.length === 3 && csvLoaded.value) regroup(code);
+});
 
 function onDownload() {
   const ics = generateIcs(filteredTrips.value, selectedReminders.value);
@@ -59,6 +65,7 @@ function reset() {
   trips.value = [];
   dateFrom.value = "";
   dateTo.value = "";
+  homeAirport.value = "SIN";
   error.value = null;
 }
 </script>
@@ -71,6 +78,9 @@ function reset() {
         <p class="mt-2 text-gray-500">
           Upload your flight roster CSV and export grouped trips to your
           calendar
+        </p>
+        <p class="mt-1 text-xs text-gray-400">
+          Singapore (SIN) base · all times in SGT (UTC+8)
         </p>
       </header>
 
@@ -90,7 +100,25 @@ function reset() {
         <div
           class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         >
-          <DateFilter v-model:from="dateFrom" v-model:to="dateTo" />
+          <div class="flex flex-col gap-2">
+            <DateFilter v-model:from="dateFrom" v-model:to="dateTo" />
+            <!-- <div class="flex items-center gap-2">
+              <label
+                for="home-airport"
+                class="w-10 sm:w-auto text-sm font-medium text-gray-700"
+                >Home:</label
+              >
+              <input
+                id="home-airport"
+                v-model="homeAirport"
+                type="text"
+                maxlength="3"
+                placeholder="SIN"
+                class="w-20 rounded-lg border border-gray-300 px-3 py-2 text-sm uppercase focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <span class="text-xs text-gray-400">IATA code</span>
+            </div> -->
+          </div>
           <button
             class="text-sm text-gray-500 hover:text-gray-700"
             @click="reset"
@@ -243,6 +271,16 @@ function reset() {
           </ol>
         </div>
       </div>
+
+      <!-- Footer -->
+      <p class="mt-8 text-center text-xs text-gray-400">
+        Suggestions or enhancements?
+        <a
+          href="mailto:winphong1011@gmail.com"
+          class="underline hover:text-gray-600"
+          >winphong.tan@gmail.com</a
+        >
+      </p>
     </div>
   </div>
 </template>

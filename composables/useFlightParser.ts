@@ -50,7 +50,41 @@ function parseFlightLegs(csvText: string): FlightLeg[] {
   });
 }
 
-function groupTrips(legs: FlightLeg[]): Trip[] {
+/** The destination is the `to` of the leg with the longest gap before the
+ *  next departure — i.e. where the traveller actually stays. Falls back to
+ *  the first leg's `to` for single-leg or same-day trips. */
+function findDestination(legs: FlightLeg[]): string {
+  if (legs.length === 1) return legs[0].to;
+  let maxGap = -1;
+  let destination = legs[0].to;
+  for (let i = 0; i < legs.length - 1; i++) {
+    const arriveAt = parseSgtIso(legs[i].arriveAt);
+    const nextDepartAt = parseSgtIso(legs[i + 1].departAt);
+    const gap = nextDepartAt.getTime() - arriveAt.getTime();
+    if (gap > maxGap) {
+      maxGap = gap;
+      destination = legs[i].to;
+    }
+  }
+  return destination;
+}
+
+const MAX_TRIP_GAP_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+
+function finalizeTrip(legs: FlightLeg[]): Trip {
+  const destination = findDestination(legs);
+  const departureDate = parseSgtIso(legs[0].departAt);
+  const returnDate = parseSgtIso(legs[legs.length - 1].arriveAt);
+  return {
+    legs: [...legs],
+    destination,
+    departureDate,
+    returnDate,
+    flightNumbers: legs.map((l) => l.flightNo),
+  };
+}
+
+function groupTrips(legs: FlightLeg[], homeAirport: string): Trip[] {
   // Sort legs by departure time
   const sorted = [...legs].sort((a, b) => {
     const dateA = parseSgtIso(a.departAt);
@@ -62,45 +96,30 @@ function groupTrips(legs: FlightLeg[]): Trip[] {
   let currentLegs: FlightLeg[] = [];
 
   for (const leg of sorted) {
-    // Start a new trip when departing from SIN
-    if (leg.from === "SIN" && currentLegs.length === 0) {
-      currentLegs.push(leg);
-    } else if (currentLegs.length > 0) {
-      currentLegs.push(leg);
-
-      // Trip ends when arriving back at SIN
-      if (leg.to === "SIN") {
-        const destination = currentLegs[0].to;
-        const departureDate = parseSgtIso(currentLegs[0].departAt);
-        const lastLeg = currentLegs[currentLegs.length - 1];
-        const returnDate = parseSgtIso(lastLeg.arriveAt);
-
-        trips.push({
-          legs: [...currentLegs],
-          destination,
-          departureDate,
-          returnDate,
-          flightNumbers: currentLegs.map((l) => l.flightNo),
-        });
+    // If a trip is in progress but gap to this leg exceeds 14 days, close it first
+    if (currentLegs.length > 0) {
+      const lastLeg = currentLegs[currentLegs.length - 1];
+      const gap =
+        parseSgtIso(leg.departAt).getTime() -
+        parseSgtIso(lastLeg.arriveAt).getTime();
+      if (gap > MAX_TRIP_GAP_MS) {
+        trips.push(finalizeTrip(currentLegs));
         currentLegs = [];
       }
+    }
+
+    currentLegs.push(leg);
+
+    // Trip ends when arriving back at home airport
+    if (leg.to === homeAirport) {
+      trips.push(finalizeTrip(currentLegs));
+      currentLegs = [];
     }
   }
 
   // Handle incomplete trip (no return to SIN yet)
   if (currentLegs.length > 0) {
-    const destination = currentLegs[0].to;
-    const departureDate = parseSgtIso(currentLegs[0].departAt);
-    const lastLeg = currentLegs[currentLegs.length - 1];
-    const returnDate = parseSgtIso(lastLeg.arriveAt);
-
-    trips.push({
-      legs: [...currentLegs],
-      destination,
-      departureDate,
-      returnDate,
-      flightNumbers: currentLegs.map((l) => l.flightNo),
-    });
+    trips.push(finalizeTrip(currentLegs));
   }
 
   return trips;
@@ -109,8 +128,9 @@ function groupTrips(legs: FlightLeg[]): Trip[] {
 export function useFlightParser() {
   const trips = ref<Trip[]>([]);
   const error = ref<string | null>(null);
+  const rawLegs = ref<FlightLeg[]>([]);
 
-  function parseCsv(csvText: string) {
+  function parseCsv(csvText: string, homeAirport: string) {
     try {
       error.value = null;
       const legs = parseFlightLegs(csvText);
@@ -118,10 +138,18 @@ export function useFlightParser() {
         error.value = "No flight data found in CSV";
         return;
       }
-      trips.value = groupTrips(legs);
+      rawLegs.value = legs;
+      trips.value = groupTrips(legs, homeAirport);
     } catch (e) {
       error.value = e instanceof Error ? e.message : "Failed to parse CSV";
+      rawLegs.value = [];
       trips.value = [];
+    }
+  }
+
+  function regroup(homeAirport: string) {
+    if (rawLegs.value.length > 0) {
+      trips.value = groupTrips(rawLegs.value, homeAirport);
     }
   }
 
@@ -133,5 +161,5 @@ export function useFlightParser() {
     });
   }
 
-  return { trips, error, parseCsv, filterByDate };
+  return { trips, error, parseCsv, regroup, filterByDate };
 }
