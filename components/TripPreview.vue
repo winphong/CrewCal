@@ -34,24 +34,25 @@ function formatDateTime(iso: string): string {
       :key="i"
       class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
     >
-      <div class="flex items-start justify-between">
-        <div>
-          <h3 class="text-lg font-semibold">
-            {{ getAirportInfo(trip.destination).flag }}
-            {{ getAirportInfo(trip.destination).city }} -
-            {{ getAirportInfo(trip.destination).country }}
-          </h3>
-          <p class="mt-1 text-sm text-gray-500">
-            {{ trip.flightNumbers.join(" / ") }}
-          </p>
+      <div>
+        <h3 class="text-lg font-semibold">
+          {{ getAirportInfo(trip.destination).flag }}
+          {{ getAirportInfo(trip.destination).city }} -
+          {{ getAirportInfo(trip.destination).country }}
+        </h3>
+        <p class="mt-1 text-sm text-gray-500">
+          {{ trip.flightNumbers.join(" / ") }}
+        </p>
+        <div class="mt-2 flex items-start gap-1.5 text-sm text-gray-600">
+          <span class="mt-px shrink-0">📍</span>
+          <a
+            :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(getLocationText(trip.destination))}`"
+            target="_blank"
+            class="hover:underline"
+          >
+            {{ getLocationText(trip.destination) }}
+          </a>
         </div>
-        <a
-          :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(getLocationText(trip.destination))}`"
-          target="_blank"
-          class="text-sm text-blue-600 hover:underline"
-        >
-          Map
-        </a>
       </div>
 
       <div class="mt-3 text-sm text-gray-600">

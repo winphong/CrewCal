@@ -48,6 +48,13 @@ function formatUidDate(date: Date): string {
   return `${y}${m}${d}`;
 }
 
+export function buildIcsEvents(
+  trips: Trip[],
+  reminderHours: number[],
+): IcsEvent[] {
+  return trips.map((trip) => tripToIcsEvent(trip, reminderHours));
+}
+
 export function useIcsGenerator() {
   function generateIcs(trips: Trip[], reminderHours: number[] = []): string {
     const events = trips.map((trip) => tripToIcsEvent(trip, reminderHours));

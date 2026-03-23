@@ -13,6 +13,7 @@ const dateFrom = ref(todaySGT());
 const dateTo = ref("");
 const homeAirport = ref("SIN");
 const csvLoaded = ref(false);
+const previewTab = ref<"trips" | "ics">("trips");
 const selectedReminders = ref<number[]>([2, 3, 4, 6]);
 
 const reminderOptions: ReminderOption[] = [
@@ -162,11 +163,44 @@ function reset() {
           </button>
         </div>
 
-        <!-- Preview -->
+        <!-- Preview tabs -->
         <div class="mt-6">
-          <TripPreview :trips="filteredTrips" />
+          <div class="mb-4 flex gap-1 rounded-lg bg-gray-100 p-1">
+            <button
+              class="flex-1 rounded-md py-1.5 text-sm font-medium transition-colors"
+              :class="
+                previewTab === 'trips'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              "
+              @click="previewTab = 'trips'"
+            >
+              Trips
+            </button>
+            <button
+              class="flex-1 rounded-md py-1.5 text-sm font-medium transition-colors"
+              :class="
+                previewTab === 'ics'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              "
+              @click="previewTab = 'ics'"
+            >
+              Calendar preview
+            </button>
+          </div>
+          <TripPreview v-if="previewTab === 'trips'" :trips="filteredTrips" />
+          <IcsEventPreview
+            v-else
+            :trips="filteredTrips"
+            :reminder-hours="selectedReminders"
+          />
         </div>
       </template>
+
+      <!-- ICS Importer -->
+      <IcsImporter />
+
       <!-- How to import -->
       <div class="mt-12 rounded-xl border border-gray-200 bg-white p-6">
         <h2 class="text-base font-semibold text-gray-900">
