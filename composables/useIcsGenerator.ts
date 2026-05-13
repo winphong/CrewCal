@@ -76,14 +76,30 @@ function tripToIcsEvent(trip: Trip, reminderHours: number[]): IcsEvent {
   const flightNos = trip.flightNumbers.join("/");
   const uid = `${trip.flightNumbers.join("-")}-${formatUidDate(trip.departureDate)}@flight-schedule-exporter`;
 
-  const days = Math.floor(
-    (trip.returnDate.getTime() - trip.departureDate.getTime()) /
-      (1000 * 60 * 60 * 24),
-  );
+  // Count distinct calendar days in SGT (UTC+8), inclusive of both endpoints
+  const toSgtDateMs = (d: Date) => {
+    const sgt = new Date(d.getTime() + 8 * 60 * 60 * 1000);
+    return Date.UTC(sgt.getUTCFullYear(), sgt.getUTCMonth(), sgt.getUTCDate());
+  };
+  const days =
+    Math.round(
+      (toSgtDateMs(trip.returnDate) - toSgtDateMs(trip.departureDate)) /
+        (1000 * 60 * 60 * 24),
+    ) + 1;
   const summary = `${destInfo.city} - ${destInfo.country} ${destInfo.flag} (${flightNos} · ${days}d)`;
   const location = getLocationText(trip.destination);
   const geo = getGeo(trip.destination);
   const description = trip.legs.map(formatLegDetail).join("\n\n");
+
+  // All-day DTEND is exclusive: advance return date by 1 SGT calendar day
+  const returnSgt = new Date(trip.returnDate.getTime() + 8 * 60 * 60 * 1000);
+  const dtend = new Date(
+    Date.UTC(
+      returnSgt.getUTCFullYear(),
+      returnSgt.getUTCMonth(),
+      returnSgt.getUTCDate() + 1,
+    ),
+  );
 
   return {
     uid,
@@ -92,8 +108,9 @@ function tripToIcsEvent(trip: Trip, reminderHours: number[]): IcsEvent {
     location,
     geo,
     dtstart: trip.departureDate,
-    dtend: trip.returnDate,
+    dtend,
     reminderHours,
+    allDay: true,
   };
 }
 

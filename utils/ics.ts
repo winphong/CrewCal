@@ -99,6 +99,7 @@ export interface IcsEvent {
   dtstart: Date;
   dtend: Date;
   reminderHours: number[];
+  allDay?: boolean;
 }
 
 function buildSgtVTimezone(): string {
@@ -116,13 +117,28 @@ function buildSgtVTimezone(): string {
   return lines.map(foldLine).join(CRLF);
 }
 
+function formatDateInSgt(date: Date): string {
+  const sgt = new Date(date.getTime() + 8 * 60 * 60 * 1000);
+  const y = sgt.getUTCFullYear();
+  const m = String(sgt.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(sgt.getUTCDate()).padStart(2, "0");
+  return `${y}${m}${d}`;
+}
+
 function buildVEvent(event: IcsEvent): string {
+  const dtStartLine = event.allDay
+    ? `DTSTART;VALUE=DATE:${formatDateInSgt(event.dtstart)}`
+    : `DTSTART;TZID=${SGT}:${formatDateTimeInTz(event.dtstart, SGT)}`;
+  const dtEndLine = event.allDay
+    ? `DTEND;VALUE=DATE:${formatDateInSgt(event.dtend)}`
+    : `DTEND;TZID=${SGT}:${formatDateTimeInTz(event.dtend, SGT)}`;
+
   const lines = [
     "BEGIN:VEVENT",
     `UID:${event.uid}`,
     `DTSTAMP:${formatDateTimeUTC(new Date())}`,
-    `DTSTART;TZID=${SGT}:${formatDateTimeInTz(event.dtstart, SGT)}`,
-    `DTEND;TZID=${SGT}:${formatDateTimeInTz(event.dtend, SGT)}`,
+    dtStartLine,
+    dtEndLine,
     `SUMMARY:${escapeText(event.summary)}`,
     `LOCATION:${escapeText(event.location)}`,
     ...(event.geo ? [`GEO:${event.geo}`] : []),
