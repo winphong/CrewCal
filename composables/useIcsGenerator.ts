@@ -10,6 +10,19 @@ function parseSgtIso(isoStr: string): Date {
   return new Date(Date.UTC(y, m - 1, d, h - 8, min));
 }
 
+/** Parse an ISO datetime string in a given IANA timezone into a UTC Date */
+function parseLocalIso(isoStr: string, tz: string): Date {
+  // Treat isoStr as UTC momentarily to get a Date object
+  const naive = new Date(isoStr + "Z");
+  // Find what local time that UTC corresponds to in `tz`
+  const localStr = naive.toLocaleString("sv-SE", { timeZone: tz }); // "YYYY-MM-DD HH:MM:SS"
+  const localAsUtc = new Date(localStr.replace(" ", "T") + "Z");
+  // offsetMs = how far local is ahead of UTC
+  const offsetMs = localAsUtc.getTime() - naive.getTime();
+  // Actual UTC = naive shifted back by the offset
+  return new Date(naive.getTime() - offsetMs);
+}
+
 function formatLegDetail(leg: {
   flightNo: string;
   from: string;
@@ -25,6 +38,13 @@ function formatLegDetail(leg: {
   return `${leg.flightNo}: ${fromInfo.city} (${leg.from}) → ${toInfo.city} (${leg.to}) | ${depDisplay} - ${arrDisplay}`;
 }
 
+function formatDuration(start: Date, end: Date): string {
+  const totalMinutes = Math.round((end.getTime() - start.getTime()) / 60000);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
 function legToIcsEvent(leg: FlightLeg, reminderHours: number[]): IcsEvent {
   const fromInfo = getAirportInfo(leg.from);
   const toInfo = getAirportInfo(leg.to);
@@ -32,7 +52,11 @@ function legToIcsEvent(leg: FlightLeg, reminderHours: number[]): IcsEvent {
   const dtend = parseSgtIso(leg.arriveAt);
   // UID based on flight number + departure datetime for deduplication
   const uid = `${leg.flightNo}-${leg.departAt.replace(/[T:]/g, "")}@flight-schedule-exporter`;
-  const summary = `${leg.flightNo} · ${leg.from} → ${leg.to}`;
+  // Use each airport's local timezone to compute the actual flight duration
+  const depUtc = parseLocalIso(leg.departAt, fromInfo.tz ?? "Asia/Singapore");
+  const arrUtc = parseLocalIso(leg.arriveAt, toInfo.tz ?? "Asia/Singapore");
+  const duration = formatDuration(depUtc, arrUtc);
+  const summary = `${leg.flightNo} · ${leg.from} → ${leg.to} (${duration})`;
   const description = `${leg.flightNo}: ${fromInfo.city} (${leg.from}) → ${toInfo.city} (${leg.to}) | ${leg.departAt.replace("T", " ")} - ${leg.arriveAt.replace("T", " ")}`;
 
   return {
@@ -52,7 +76,11 @@ function tripToIcsEvent(trip: Trip, reminderHours: number[]): IcsEvent {
   const flightNos = trip.flightNumbers.join("/");
   const uid = `${trip.flightNumbers.join("-")}-${formatUidDate(trip.departureDate)}@flight-schedule-exporter`;
 
-  const summary = `${destInfo.city} - ${destInfo.country} ${destInfo.flag} (${flightNos})`;
+  const days = Math.floor(
+    (trip.returnDate.getTime() - trip.departureDate.getTime()) /
+      (1000 * 60 * 60 * 24),
+  );
+  const summary = `${destInfo.city} - ${destInfo.country} ${destInfo.flag} (${flightNos} · ${days}d)`;
   const location = getLocationText(trip.destination);
   const geo = getGeo(trip.destination);
   const description = trip.legs.map(formatLegDetail).join("\n\n");
