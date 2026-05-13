@@ -20,6 +20,7 @@ export interface AirportInfo {
   flag: string;
   lat: number;
   lon: number;
+  tz?: string; // IANA timezone e.g. "Asia/Singapore"
   name?: string; // Full airport name e.g. "Los Angeles International Airport"
 }
 

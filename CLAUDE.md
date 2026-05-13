@@ -40,7 +40,7 @@ Flights are grouped into trips: a trip starts when `from === 'SIN'` and ends whe
 
 ## Key Files
 
-- `utils/airports.ts` — 6000+ airports from OpenFlights dataset (auto-generated, do not hand-edit)
+- `utils/airports.ts` — 6000+ airports from OpenFlights dataset (auto-generated, do not hand-edit). Each entry includes city, country, flag, lat/lon, and IANA timezone. After regenerating the base data, re-add timezone fields with `bun run scripts/add-airport-timezones.ts`
 - `utils/ics.ts` — Low-level ICS string builder
 - `composables/useFlightParser.ts` — CSV parsing + trip grouping
 - `composables/useIcsGenerator.ts` — Trip → ICS event conversion + blob download

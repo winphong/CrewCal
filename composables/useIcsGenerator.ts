@@ -1,6 +1,14 @@
 import { buildIcs, type IcsEvent } from "~/utils/ics";
 import { getAirportInfo, getLocationText, getGeo } from "~/utils/airports";
-import type { Trip } from "~/utils/types";
+import type { FlightLeg, Trip } from "~/utils/types";
+
+/** Parse an ISO datetime string (SGT, no timezone suffix) into a UTC Date */
+function parseSgtIso(isoStr: string): Date {
+  const [datePart, timePart] = isoStr.split("T");
+  const [y, m, d] = datePart.split("-").map(Number);
+  const [h, min] = (timePart ?? "00:00").split(":").map(Number);
+  return new Date(Date.UTC(y, m - 1, d, h - 8, min));
+}
 
 function formatLegDetail(leg: {
   flightNo: string;
@@ -15,6 +23,28 @@ function formatLegDetail(leg: {
   const depDisplay = leg.departAt.replace("T", " ");
   const arrDisplay = leg.arriveAt.replace("T", " ");
   return `${leg.flightNo}: ${fromInfo.city} (${leg.from}) → ${toInfo.city} (${leg.to}) | ${depDisplay} - ${arrDisplay}`;
+}
+
+function legToIcsEvent(leg: FlightLeg, reminderHours: number[]): IcsEvent {
+  const fromInfo = getAirportInfo(leg.from);
+  const toInfo = getAirportInfo(leg.to);
+  const dtstart = parseSgtIso(leg.departAt);
+  const dtend = parseSgtIso(leg.arriveAt);
+  // UID based on flight number + departure datetime for deduplication
+  const uid = `${leg.flightNo}-${leg.departAt.replace(/[T:]/g, "")}@flight-schedule-exporter`;
+  const summary = `${leg.flightNo} · ${leg.from} → ${leg.to}`;
+  const description = `${leg.flightNo}: ${fromInfo.city} (${leg.from}) → ${toInfo.city} (${leg.to}) | ${leg.departAt.replace("T", " ")} - ${leg.arriveAt.replace("T", " ")}`;
+
+  return {
+    uid,
+    summary,
+    description,
+    location: getLocationText(leg.to),
+    geo: getGeo(leg.to),
+    dtstart,
+    dtend,
+    reminderHours,
+  };
 }
 
 function tripToIcsEvent(trip: Trip, reminderHours: number[]): IcsEvent {
@@ -52,12 +82,16 @@ export function buildIcsEvents(
   trips: Trip[],
   reminderHours: number[],
 ): IcsEvent[] {
-  return trips.map((trip) => tripToIcsEvent(trip, reminderHours));
+  const tripEvents = trips.map((trip) => tripToIcsEvent(trip, reminderHours));
+  const legEvents = trips.flatMap((trip) =>
+    trip.legs.map((leg) => legToIcsEvent(leg, reminderHours)),
+  );
+  return [...tripEvents, ...legEvents];
 }
 
 export function useIcsGenerator() {
   function generateIcs(trips: Trip[], reminderHours: number[] = []): string {
-    const events = trips.map((trip) => tripToIcsEvent(trip, reminderHours));
+    const events = buildIcsEvents(trips, reminderHours);
     return buildIcs(events);
   }
 

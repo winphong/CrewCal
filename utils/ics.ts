@@ -1,9 +1,10 @@
 /**
  * Low-level ICS string builder (RFC 5545 subset)
- * All datetimes are in Asia/Singapore timezone.
+ * All datetimes use a single IANA timezone per event (default: Asia/Singapore).
  */
 
 const CRLF = "\r\n";
+const SGT = "Asia/Singapore";
 
 /** Fold lines at 75 octets per RFC 5545 */
 function foldLine(line: string): string {
@@ -52,15 +53,31 @@ function escapeText(text: string): string {
     .replace(/\n/g, "\\n");
 }
 
-function formatDateTimeSGT(date: Date): string {
-  // Format as YYYYMMDDTHHMMSS for TZID=Asia/Singapore
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  const h = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
-  const s = String(date.getSeconds()).padStart(2, "0");
-  return `${y}${m}${d}T${h}${min}${s}`;
+/** Format a UTC Date as YYYYMMDDTHHMMSS in a given IANA timezone */
+function formatDateTimeInTz(date: Date, tz: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+
+  const get = (type: string) =>
+    parts.find((p) => p.type === type)?.value ?? "00";
+  // en-CA gives "2026-01-20" for date parts; grab each piece individually
+  const year = get("year");
+  const month = get("month");
+  const day = get("day");
+  let hour = get("hour");
+  // Intl may return "24" for midnight in some locales; normalise to "00"
+  if (hour === "24") hour = "00";
+  const minute = get("minute");
+  const second = get("second");
+  return `${year}${month}${day}T${hour}${minute}${second}`;
 }
 
 function formatDateTimeUTC(date: Date): string {
@@ -79,12 +96,12 @@ export interface IcsEvent {
   description: string;
   location: string;
   geo: string | null; // "lat;lon" e.g. "33.9425;-118.408"
-  dtstart: Date; // SGT datetime
-  dtend: Date; // SGT datetime
+  dtstart: Date;
+  dtend: Date;
   reminderHours: number[];
 }
 
-function buildVTimezone(): string {
+function buildSgtVTimezone(): string {
   const lines = [
     "BEGIN:VTIMEZONE",
     "TZID:Asia/Singapore",
@@ -104,8 +121,8 @@ function buildVEvent(event: IcsEvent): string {
     "BEGIN:VEVENT",
     `UID:${event.uid}`,
     `DTSTAMP:${formatDateTimeUTC(new Date())}`,
-    `DTSTART;TZID=Asia/Singapore:${formatDateTimeSGT(event.dtstart)}`,
-    `DTEND;TZID=Asia/Singapore:${formatDateTimeSGT(event.dtend)}`,
+    `DTSTART;TZID=${SGT}:${formatDateTimeInTz(event.dtstart, SGT)}`,
+    `DTEND;TZID=${SGT}:${formatDateTimeInTz(event.dtend, SGT)}`,
     `SUMMARY:${escapeText(event.summary)}`,
     `LOCATION:${escapeText(event.location)}`,
     ...(event.geo ? [`GEO:${event.geo}`] : []),
@@ -136,7 +153,7 @@ export function buildIcs(events: IcsEvent[]): string {
   ];
 
   const header = lines.map(foldLine).join(CRLF);
-  const timezone = buildVTimezone();
+  const timezone = buildSgtVTimezone();
   const vevents = events.map(buildVEvent).join(CRLF);
   const footer = "END:VCALENDAR";
 
