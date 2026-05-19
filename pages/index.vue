@@ -14,7 +14,8 @@ const dateTo = ref("");
 const homeAirport = ref("SIN");
 const csvLoaded = ref(false);
 const previewTab = ref<"trips" | "ics">("trips");
-const selectedReminders = ref<number[]>([2, 3, 4, 6]);
+const selectedTripReminders = ref<number[]>([2]);
+const selectedReminders = ref<number[]>([3]);
 
 const reminderOptions: ReminderOption[] = [
   { label: "2 hours", hours: 2 },
@@ -48,7 +49,11 @@ watch(homeAirport, (val) => {
 });
 
 function onDownload() {
-  const ics = generateIcs(filteredTrips.value, selectedReminders.value);
+  const ics = generateIcs(
+    filteredTrips.value,
+    selectedReminders.value,
+    selectedTripReminders.value,
+  );
   downloadIcs(ics);
 }
 
@@ -58,6 +63,15 @@ function toggleReminder(hours: number) {
     selectedReminders.value.splice(idx, 1);
   } else {
     selectedReminders.value.push(hours);
+  }
+}
+
+function toggleTripReminder(hours: number) {
+  const idx = selectedTripReminders.value.indexOf(hours);
+  if (idx >= 0) {
+    selectedTripReminders.value.splice(idx, 1);
+  } else {
+    selectedTripReminders.value.push(hours);
   }
 }
 
@@ -129,21 +143,43 @@ function reset() {
         </div>
 
         <!-- Reminders -->
-        <div class="mt-4 flex flex-wrap items-center gap-2">
-          <span class="text-sm font-medium text-gray-700">Reminders:</span>
-          <button
-            v-for="opt in reminderOptions"
-            :key="opt.hours"
-            class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
-            :class="
-              selectedReminders.includes(opt.hours)
-                ? 'bg-blue-100 text-blue-700'
-                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-            "
-            @click="toggleReminder(opt.hours)"
-          >
-            {{ opt.label }}
-          </button>
+        <div class="mt-4 space-y-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-sm font-medium text-gray-700"
+              >Trip reminders:</span
+            >
+            <button
+              v-for="opt in reminderOptions"
+              :key="opt.hours"
+              class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+              :class="
+                selectedTripReminders.includes(opt.hours)
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              "
+              @click="toggleTripReminder(opt.hours)"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-sm font-medium text-gray-700"
+              >Flight reminders:</span
+            >
+            <button
+              v-for="opt in reminderOptions"
+              :key="opt.hours"
+              class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+              :class="
+                selectedReminders.includes(opt.hours)
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              "
+              @click="toggleReminder(opt.hours)"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
         </div>
 
         <!-- Trip count & download -->
@@ -194,6 +230,7 @@ function reset() {
             v-else
             :trips="filteredTrips"
             :reminder-hours="selectedReminders"
+            :trip-reminder-hours="selectedTripReminders"
           />
         </div>
       </template>

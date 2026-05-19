@@ -125,18 +125,25 @@ function formatUidDate(date: Date): string {
 
 export function buildIcsEvents(
   trips: Trip[],
-  reminderHours: number[],
+  legReminderHours: number[],
+  tripReminderHours: number[] = [2],
 ): IcsEvent[] {
-  const tripEvents = trips.map((trip) => tripToIcsEvent(trip, reminderHours));
+  const tripEvents = trips.map((trip) =>
+    tripToIcsEvent(trip, tripReminderHours),
+  );
   const legEvents = trips.flatMap((trip) =>
-    trip.legs.map((leg) => legToIcsEvent(leg, reminderHours)),
+    trip.legs.map((leg) => legToIcsEvent(leg, legReminderHours)),
   );
   return [...tripEvents, ...legEvents];
 }
 
 export function useIcsGenerator() {
-  function generateIcs(trips: Trip[], reminderHours: number[] = []): string {
-    const events = buildIcsEvents(trips, reminderHours);
+  function generateIcs(
+    trips: Trip[],
+    legReminderHours: number[] = [],
+    tripReminderHours: number[] = [2],
+  ): string {
+    const events = buildIcsEvents(trips, legReminderHours, tripReminderHours);
     return buildIcs(events);
   }
 

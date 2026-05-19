@@ -6,10 +6,11 @@ import type { Trip } from "~/utils/types";
 const props = defineProps<{
   trips: Trip[];
   reminderHours: number[];
+  tripReminderHours: number[];
 }>();
 
 const events = computed<IcsEvent[]>(() =>
-  buildIcsEvents(props.trips, props.reminderHours),
+  buildIcsEvents(props.trips, props.reminderHours, props.tripReminderHours),
 );
 
 const expanded = ref<Record<number, boolean>>({});
